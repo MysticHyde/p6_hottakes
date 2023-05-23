@@ -1,20 +1,16 @@
 const Sauce = require("../models/Sauce");
 const fs = require("fs");
 
-//////////////////////////////////////////////////
-// Création d'une sauce
-//////////////////////////////////////////////////
+// CREATION //
 exports.newSauce = (req, res, next) => {
-  const sauceObj = JSON.parse(req.body.sauce);
-  delete sauceObj._id;
-  delete sauceObj._userId;
+  const reqObj = JSON.parse(req.body.sauce);
+  delete reqObj.userId;
 
   const sauce = new Sauce({
-    ...sauceObj,
+    ...reqObj,
     userId: req.auth.userId,
-    imageUrl: `${req.protocol}://${req.get("host")}/images/${
-      req.file.filename
-    }`,
+    imageUrl: `${req.protocol}://${req.get("host")}/images/${req.file.filename
+      }`,
     likes: 0,
     dislikes: 0,
     usersLiked: [],
@@ -31,43 +27,54 @@ exports.newSauce = (req, res, next) => {
     });
 };
 
-//////////////////////////////////////////////////
-// Modification d'une sauce
-//////////////////////////////////////////////////
+// MODIFICATION //
 exports.editSauce = (req, res, next) => {
-  const sauceObj = req.file
+
+  const reqObj = req.file
     ? {
-        ...JSON.parse(req.body.sauce),
-        imageUrl: `${req.protocol}://${req.get("host")}/images/${
-          req.file.filename
-        }`,
-      }
+      ...JSON.parse(req.body.sauce),
+      imageUrl: `${req.protocol}://${req.get("host")}/images/${req.file.filename}`,
+    }
     : {
-        ...req.body,
-      };
-  delete sauceObj._userId;
+      ...req.body,
+    };
+
+  delete reqObj._userId;
+
   Sauce.findOne({ _id: req.params.id })
     .then((sauce) => {
       if (sauce.userId != req.auth.userId) {
         res.status(401).json({ message: "Non autorisé" });
       } else {
-        const filename = sauce.imageUrl.split("/images/")[1];
-        fs.unlink(`images/${filename}`, () => {
+        if (req.file) {
+          const filename = sauce.imageUrl.split("/images/")[1];
+          fs.unlink(`images/${filename}`, () => {
+            Sauce.updateOne(
+              { _id: req.params.id },
+              { ...reqObj, _id: req.params.id }
+            )
+              .then(() => res.status(200).json({ message: "Sauce modifiée  avec nouvelle image !" }))
+              .catch((error) => res.status(401).json({ error }));
+          });
+        } else {
           Sauce.updateOne(
             { _id: req.params.id },
-            { ...sauceObj, _id: req.params.id }
+            { ...reqObj, _id: req.params.id }
           )
             .then(() => res.status(200).json({ message: "Sauce modifiée !" }))
             .catch((error) => res.status(401).json({ error }));
-        });
+
+        }
+
       }
     })
     .catch((error) => res.status(400).json({ error }));
 };
 
-//////////////////////////////////////////////////
-// Suppression d'une sauce
-//////////////////////////////////////////////////
+
+
+
+// SUPPRESSION //
 exports.deleteSauce = (req, res, next) => {
   Sauce.findOne({ _id: req.params.id })
     .then((sauce) => {
@@ -85,35 +92,37 @@ exports.deleteSauce = (req, res, next) => {
     .catch((error) => res.status(500).json({ error }));
 };
 
-//////////////////////////////////////////////////
-// Obtention d'une sauce
-//////////////////////////////////////////////////
+
+
+
+// OBTENIR UNE SAUCE //
 exports.getSauce = (req, res, next) => {
-  Sauce.findOne({ _id: req.params.id })
+  let paramId = req.params.id;
+  Sauce.findOne({ _id: paramId })
     .then((sauce) => res.status(200).json(sauce))
     .catch((error) => res.status(404).json({ error }));
 };
 
-//////////////////////////////////////////////////
-// Obtention de toutes les sauces
-//////////////////////////////////////////////////
+
+
+
+// OBTENIR TOUTES LES SAUCES //
 exports.getAllSauces = (req, res, next) => {
   Sauce.find()
     .then((sauces) => res.status(200).json(sauces))
     .catch((error) => res.status(400).json({ error }));
 };
 
-//////////////////////////////////////////////////
-// Like d'une sauce
-//////////////////////////////////////////////////
+
+
+
+// LIKE / DISLIKE //
 exports.likeSauce = (req, res, next) => {
   const sauceObj = req.body;
 
   switch (sauceObj.like) {
     case 1:
-      //////////////////////////////////////////////////
-      // Ajout d'un like
-      //////////////////////////////////////////////////
+      // LIKE //
       Sauce.updateOne(
         { _id: req.params.id },
         {
@@ -126,9 +135,7 @@ exports.likeSauce = (req, res, next) => {
       break;
 
     case -1:
-      //////////////////////////////////////////////////
-      // Ajout d'un dislike
-      //////////////////////////////////////////////////
+      // DISLIKE //
       Sauce.updateOne(
         { _id: req.params.id },
         {
@@ -141,9 +148,7 @@ exports.likeSauce = (req, res, next) => {
       break;
 
     case 0:
-      //////////////////////////////////////////////////
-      // Retrait d'un like/dislike
-      //////////////////////////////////////////////////
+      // RETRAIT DU LIKE / DISLIKE //
       Sauce.findOne({ _id: req.params.id }).then((sauce) => {
         console.log("id sauce = " + req.params.id);
         console.log("id user = " + sauceObj.userId);

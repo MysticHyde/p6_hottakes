@@ -12,7 +12,7 @@ const sauceSchema = mongoose.Schema({
     dislikes: { type: Number, required: true },
     usersLiked: {
         type: [{
-            type: String 
+            type: String
         }], required: true
     },
     usersDisliked: {
@@ -23,10 +23,3 @@ const sauceSchema = mongoose.Schema({
 });
 
 module.exports = mongoose.model('Sauce', sauceSchema);
-
-// "userId":"63934ae608b6ba14a8eb4490"
-// "name":"sdfsd",
-// "manufacturer":"sdfsdf",
-// "description":"sdfsdf",
-// "mainPepper":"dsfsd",
-// "heat":2,
